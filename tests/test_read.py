@@ -4,69 +4,14 @@ import bfio
 import numpy as np
 import random
 
-
-import requests, pathlib, shutil, logging, sys
-from ome_zarr.utils import download as zarr_download
-
-TEST_IMAGES = {
-    "5025551.zarr": "https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0054A/5025551.zarr",
-    "p01_x01_y01_wx0_wy0_c1.ome.tif": "https://raw.githubusercontent.com/sameeul/polus-test-data/main/bfio/p01_x01_y01_wx0_wy0_c1.ome.tif",
-    "Plate1-Blue-A-12-Scene-3-P3-F2-03.czi": "https://downloads.openmicroscopy.org/images/Zeiss-CZI/idr0011/Plate1-Blue-A_TS-Stinger/Plate1-Blue-A-12-Scene-3-P3-F2-03.czi",
-}
-
-TEST_DIR = pathlib.Path(__file__).with_name("data")
-
-logging.basicConfig(
-    format="%(asctime)s - %(name)-8s - %(levelname)-8s - %(message)s",
-    datefmt="%d-%b-%y %H:%M:%S",
-)
-logger = logging.getLogger("bfio.test")
-
-if "-v" in sys.argv:
-    logger.setLevel(logging.INFO)
-
-
-def setUpModule():
-    """Download images for testing"""
-    TEST_DIR.mkdir(exist_ok=True)
-
-    for file, url in TEST_IMAGES.items():
-        logger.info(f"setup - Downloading: {file}")
-
-        if not file.endswith(".zarr"):
-            if TEST_DIR.joinpath(file).exists():
-                continue
-
-            r = requests.get(url)
-
-            with open(TEST_DIR.joinpath(file), "wb") as fw:
-                fw.write(r.content)
-        else:
-            if TEST_DIR.joinpath(file).exists():
-                shutil.rmtree(TEST_DIR.joinpath(file))
-            zarr_download(url, str(TEST_DIR))
-
-    """Load the czi image, and save as a npy file for further testing."""
-    with bfio.BioReader(
-        TEST_DIR.joinpath("Plate1-Blue-A-12-Scene-3-P3-F2-03.czi")
-    ) as br:
-        with bfio.BioWriter(
-            TEST_DIR.joinpath("4d_array.ome.tif"),
-            metadata=br.metadata,
-            X=br.X,
-            Y=br.Y,
-            Z=br.Z,
-            C=br.C,
-            T=br.T,
-        ) as bw:
-            bw[:] = br[:]
+import conftest
 
 class TestOmeTiffRead(unittest.TestCase):
 
     def test_read_ome_tif_full(self):
         """test_read_ome_tif_full - Read tiff using TSTiffReader"""
         br = TSReader(
-            str(TEST_DIR.joinpath("p01_x01_y01_wx0_wy0_c1.ome.tif")),
+            str(conftest.TEST_DIR.joinpath("p01_x01_y01_wx0_wy0_c1.ome.tif")),
             FileType.OmeTiff,
             "",
         )
@@ -90,7 +35,7 @@ class TestOmeTiffRead(unittest.TestCase):
     def test_read_ome_tif_partial(self):
         """test_read_ome_tif_partial - Read partial tiff read"""
         with TSReader(
-            str(TEST_DIR.joinpath("p01_x01_y01_wx0_wy0_c1.ome.tif")),
+            str(conftest.TEST_DIR.joinpath("p01_x01_y01_wx0_wy0_c1.ome.tif")),
             FileType.OmeTiff,
             "",
         ) as br:
@@ -114,7 +59,7 @@ class TestOmeTiffRead(unittest.TestCase):
             0, 256, (img_height, img_width), dtype=np.uint16
         )
         with bfio.BioWriter(
-            str(TEST_DIR.joinpath("test_output.ome.tiff")),
+            str(conftest.TEST_DIR.joinpath("test_output.ome.tiff")),
             X=img_width,
             Y=img_height,
             dtype=np.uint16,
@@ -125,7 +70,7 @@ class TestOmeTiffRead(unittest.TestCase):
         y_max = source_data.shape[1]
 
         with TSReader(
-            str(TEST_DIR.joinpath("test_output.ome.tiff")), FileType.OmeTiff, ""
+            str(conftest.TEST_DIR.joinpath("test_output.ome.tiff")), FileType.OmeTiff, ""
         ) as test_br:
             for i in range(100):
                 x_start = random.randint(0, x_max)
@@ -162,7 +107,7 @@ class TestOmeTiffRead(unittest.TestCase):
 
     def test_read_ome_tif_4d(self):
         """test_read_ome_tif_4d - Read 4D data"""
-        br = TSReader(str(TEST_DIR.joinpath("4d_array.ome.tif")), FileType.OmeTiff, "")
+        br = TSReader(str(conftest.TEST_DIR.joinpath("4d_array.ome.tif")), FileType.OmeTiff, "")
         assert br._X == 672
         assert br._Y == 512
         assert br._Z == 21
@@ -203,7 +148,7 @@ class TestOmeZarrRead(unittest.TestCase):
     def test_read_zarr_2d_slice(self):
         """test_read_zarr_2d_slice - Read tiff using TSReader"""
         br = TSReader(
-            str(TEST_DIR.joinpath("5025551.zarr/0")),
+            str(conftest.TEST_DIR.joinpath("5025551.zarr/0")),
             FileType.OmeZarr,
             "",
         )
@@ -227,7 +172,7 @@ class TestOmeZarrRead(unittest.TestCase):
     def test_read_zarr_4d_slice(self):
         """test_read_zarr_4d_slice - Read tiff using TSReader"""
         br = TSReader(
-            str(TEST_DIR.joinpath("5025551.zarr/0")),
+            str(conftest.TEST_DIR.joinpath("5025551.zarr/0")),
             FileType.OmeZarr,
             "",
         )
