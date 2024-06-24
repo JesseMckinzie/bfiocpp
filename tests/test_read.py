@@ -4,7 +4,7 @@ import bfio
 import numpy as np
 import random
 
-from . import TEST_DIR
+from .conftest import TEST_DIR
 
 class TestOmeTiffRead(unittest.TestCase):
 

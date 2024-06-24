@@ -4,7 +4,7 @@ import os
 import numpy as np
 
 from bfiocpp import TSWriter, TSReader, Seq, FileType
-from . import TEST_DIR
+from .conftest import TEST_DIR
 
 class TestZarrWrite(unittest.TestCase):
 
